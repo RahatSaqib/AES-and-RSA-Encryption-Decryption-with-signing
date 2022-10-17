@@ -24,7 +24,7 @@ class AESEncryption:
 
     def encrypt(self, message: bytes) -> bytes:
 
-        cipher = AES.new(self.key, AES.MODE_CBC, keys) # Create a AES cipher object with the key using the mode CBC
+        cipher = AES.new(self.key, AES.MODE_CBC, iv) # Create a AES cipher object with the key using the mode CBC
         ciphered_data = cipher.encrypt(pad(message, AES.block_size)) # Pad the input data and then encrypt
         return ciphered_data
         # """Encrypts the given message using AES."""
@@ -32,7 +32,7 @@ class AESEncryption:
         # return (ciphered_data)
 
     def decrypt(self, message: bytes) -> bytes:
-        cipher = AES.new(self.key, AES.MODE_CBC, keys)
+        cipher = AES.new(self.key, AES.MODE_CBC, iv)
         decrypted_data = unpad(cipher.decrypt(message), AES.block_size)
         return decrypted_data
 
@@ -86,7 +86,7 @@ class HybridEncryption:
         self.rsa = rsa
 
     def encrypt(self, message: bytes) -> Tuple[bytes, bytes]:
-        cipher = AES.new(keys, AES.MODE_CBC,keys)
+        cipher = AES.new(keys, AES.MODE_CBC,iv)
         ciphered_data = cipher.encrypt(pad(message, AES.block_size))
         rsa_cipher = PKCS1_OAEP.new(self.rsa.key)
         cipherKey = rsa_cipher.encrypt(keys)        
@@ -100,7 +100,7 @@ class HybridEncryption:
     def decrypt(self, message: bytes, message_key: bytes) -> bytes:
         rsa_cipher = PKCS1_OAEP.new(self.rsa.key)
         cipherText = rsa_cipher.decrypt(message_key)
-        cipher = AES.new(cipherText, AES.MODE_CBC,keys)
+        cipher = AES.new(cipherText, AES.MODE_CBC,iv)
         decrypted_data = unpad(cipher.decrypt(message), AES.block_size)
 
         """
@@ -133,7 +133,8 @@ class DigitalSignature:
 
 if __name__ == "__main__":
     # Messages and Keys
-    keys= b"rahatrock2580000"
+    keys = get_random_bytes(16)
+    iv= b"munnialkuma25800"
     MESSAGE = b"This is a test message."
     MESSAGE_LONG = get_random_bytes(100_100)
     LOREM = "lorem.txt"
