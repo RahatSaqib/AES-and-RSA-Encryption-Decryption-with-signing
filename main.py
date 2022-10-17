@@ -1,5 +1,4 @@
 import os
-import secrets
 from typing import Tuple
 
 from Crypto.Cipher import AES, PKCS1_OAEP
@@ -25,7 +24,7 @@ class AESEncryption:
 
     def encrypt(self, message: bytes) -> bytes:
 
-        cipher = AES.new(self.key, AES.MODE_CBC , MESSAGE_LONG) # Create a AES cipher object with the key using the mode CBC
+        cipher = AES.new(self.key, AES.MODE_CBC, keys) # Create a AES cipher object with the key using the mode CBC
         ciphered_data = cipher.encrypt(pad(message, AES.block_size)) # Pad the input data and then encrypt
         return ciphered_data
         # """Encrypts the given message using AES."""
@@ -33,7 +32,7 @@ class AESEncryption:
         # return (ciphered_data)
 
     def decrypt(self, message: bytes) -> bytes:
-        cipher = AES.new(self.key, AES.MODE_CBC, MESSAGE_LONG)
+        cipher = AES.new(self.key, AES.MODE_CBC, keys)
         decrypted_data = unpad(cipher.decrypt(message), AES.block_size)
         return decrypted_data
 
@@ -87,7 +86,7 @@ class HybridEncryption:
         self.rsa = rsa
 
     def encrypt(self, message: bytes) -> Tuple[bytes, bytes]:
-        cipher = AES.new(keys, AES.MODE_CBC , MESSAGE_LONG)
+        cipher = AES.new(keys, AES.MODE_CBC,keys)
         ciphered_data = cipher.encrypt(pad(message, AES.block_size))
         rsa_cipher = PKCS1_OAEP.new(self.rsa.key)
         cipherKey = rsa_cipher.encrypt(keys)        
@@ -101,7 +100,7 @@ class HybridEncryption:
     def decrypt(self, message: bytes, message_key: bytes) -> bytes:
         rsa_cipher = PKCS1_OAEP.new(self.rsa.key)
         cipherText = rsa_cipher.decrypt(message_key)
-        cipher = AES.new(cipherText, AES.MODE_CBC, MESSAGE_LONG)
+        cipher = AES.new(cipherText, AES.MODE_CBC,keys)
         decrypted_data = unpad(cipher.decrypt(message), AES.block_size)
 
         """
@@ -119,18 +118,24 @@ class DigitalSignature:
 
     def sign(self, message: bytes) -> bytes:
         """Signs the given message using RSA and SHA-256 and returns the digital signature."""
-        pass
+        hash = SHA256.new(message)
+        signature = pkcs1_15.new(self.rsa.key).sign(hash)
+        return signature
 
     def verify(self, message: bytes, signature: bytes) -> bool:
-        """Verifies the digital signature of the given message using RSA and SHA-256."""
-        pass
+        hash = SHA256.new(message)
+        try:
+            pkcs1_15.new(self.rsa.key).verify(hash, signature)
+            return True
+        except (ValueError, TypeError):
+            return False
 
 
 if __name__ == "__main__":
     # Messages and Keys
     keys= b"rahatrock2580000"
     MESSAGE = b"This is a test message."
-    MESSAGE_LONG = get_random_bytes(AES.block_size)
+    MESSAGE_LONG = get_random_bytes(100_100)
     LOREM = "lorem.txt"
 
     RSA_KEY = "rsa_key.pem"
