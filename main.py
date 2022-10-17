@@ -27,7 +27,6 @@ class AESEncryption:
 
         cipher = AES.new(self.key, AES.MODE_CBC , MESSAGE_LONG) # Create a AES cipher object with the key using the mode CBC
         ciphered_data = cipher.encrypt(pad(message, AES.block_size)) # Pad the input data and then encrypt
-        print(ciphered_data)
         return ciphered_data
         # """Encrypts the given message using AES."""
         # pass
@@ -36,7 +35,6 @@ class AESEncryption:
     def decrypt(self, message: bytes) -> bytes:
         cipher = AES.new(self.key, AES.MODE_CBC, MESSAGE_LONG)
         decrypted_data = unpad(cipher.decrypt(message), AES.block_size)
-        print(decrypted_data)
         return decrypted_data
 
 
@@ -89,15 +87,11 @@ class HybridEncryption:
         self.rsa = rsa
 
     def encrypt(self, message: bytes) -> Tuple[bytes, bytes]:
-        print('working',self)
-        key = secrets.token_hex(AES.block_size)
-        keyAES = key.encode('utf-8')
-        cipher = AES.new(keyAES, AES.MODE_CBC , MESSAGE_LONG)
+        cipher = AES.new(keys, AES.MODE_CBC , MESSAGE_LONG)
         ciphered_data = cipher.encrypt(pad(message, AES.block_size))
-        rsa_cipher = PKCS1_OAEP.new(self)
-        cipherText = rsa_cipher.encrypt(ciphered_data.decode())
-        
-        return [ciphered_data , keyAES]
+        rsa_cipher = PKCS1_OAEP.new(self.rsa.key)
+        cipherKey = rsa_cipher.encrypt(keys)        
+        return [ciphered_data , cipherKey]
         """
         Encrypts the given message using a hybrid cryptosystem (AES and RSA).
         Returns the encrypted message and the encrypted symmetric key.
@@ -105,13 +99,16 @@ class HybridEncryption:
         pass
 
     def decrypt(self, message: bytes, message_key: bytes) -> bytes:
-
+        rsa_cipher = PKCS1_OAEP.new(self.rsa.key)
+        cipherText = rsa_cipher.decrypt(message_key)
+        cipher = AES.new(cipherText, AES.MODE_CBC, MESSAGE_LONG)
+        decrypted_data = unpad(cipher.decrypt(message), AES.block_size)
 
         """
         Encrypts the given message using a hybrid cryptosystem (AES and RSA).
         Requires the encrypted symmetric key that the message was encrypted with.
         """
-        pass
+        return decrypted_data
 
 
 class DigitalSignature:
