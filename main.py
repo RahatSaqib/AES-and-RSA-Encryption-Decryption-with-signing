@@ -17,22 +17,20 @@ class AESEncryption:
 
     @classmethod
     def from_nbits(cls, nbits: int = 256):
-        # cls.encrypt(keys , MESSAGE)
-        # cls.encrypt()
         """Creates an AES encryption object with a new key with the given number of bits."""
+        cls.iv= iv
+        cls.key = keys
+        cls.mode = mode
         return cls(keys)
 
     def encrypt(self, message: bytes) -> bytes:
-
-        cipher = AES.new(self.key, AES.MODE_CBC, iv) # Create a AES cipher object with the key using the mode CBC
+        """Encrypts the given message using AES.""" 
+        cipher = AES.new(self.key, self.mode, self.iv) # Create a AES cipher object with the key using the mode CBC
         ciphered_data = cipher.encrypt(pad(message, AES.block_size)) # Pad the input data and then encrypt
         return ciphered_data
-        # """Encrypts the given message using AES."""
-        # pass
-        # return (ciphered_data)
 
     def decrypt(self, message: bytes) -> bytes:
-        cipher = AES.new(self.key, AES.MODE_CBC, iv)
+        cipher = AES.new(self.key, self.mode, self.iv)
         decrypted_data = unpad(cipher.decrypt(message), AES.block_size)
         return decrypted_data
 
@@ -45,9 +43,9 @@ class RSAEncryption:
 
     @classmethod
     def from_nbits(cls, nbits: int = 2048):
-        
+        pv_key_string = RSA.generate(nbits)
         """Creates an RSA encryption object with a new key with the given number of bits."""
-        pass
+        return pv_key_string
 
     @classmethod
     def from_file(cls, filename: str, passphrase: str = None):
@@ -56,15 +54,15 @@ class RSAEncryption:
 
 
     def to_file(self, filename: str, passphrase: str = None):
+        """Saves this RSA encryption object's key to the given file."""
         isExist =  os.path.isfile(filename)
         if isExist is False:
-            pv_key_string = RSA.generate(2048)
+            pv_key_string = self.from_nbits()
             with open(filename , "wb") as file:
                 file.write(pv_key_string.exportKey('PEM' , passphrase,pkcs=8, protection="scryptAndAES128-CBC"))
                 file.close()
         key = RSA.importKey(open(filename, "rb").read(), passphrase=passphrase)
         self.key = key
-        """Saves this RSA encryption object's key to the given file."""
         return self
 
     def encrypt(self, message: bytes) -> bytes:
@@ -86,27 +84,24 @@ class HybridEncryption:
         self.rsa = rsa
 
     def encrypt(self, message: bytes) -> Tuple[bytes, bytes]:
-        cipher = AES.new(keys, AES.MODE_CBC,iv)
-        ciphered_data = cipher.encrypt(pad(message, AES.block_size))
-        rsa_cipher = PKCS1_OAEP.new(self.rsa.key)
-        cipherKey = rsa_cipher.encrypt(keys)        
+        """ Encrypts the given message using a hybrid cryptosystem (AES and RSA).
+        Returns the encrypted message and the encrypted symmetric key."""
+
+        cipher = AESEncryption.from_nbits()
+        ciphered_data = cipher.encrypt(message)
+        cipherKey = RSAEncryption.encrypt(self.rsa,keys)    
         return [ciphered_data , cipherKey]
-        """
-        Encrypts the given message using a hybrid cryptosystem (AES and RSA).
-        Returns the encrypted message and the encrypted symmetric key.
-        """
-        pass
 
     def decrypt(self, message: bytes, message_key: bytes) -> bytes:
-        rsa_cipher = PKCS1_OAEP.new(self.rsa.key)
-        cipherText = rsa_cipher.decrypt(message_key)
-        cipher = AES.new(cipherText, AES.MODE_CBC,iv)
-        decrypted_data = unpad(cipher.decrypt(message), AES.block_size)
-
         """
         Encrypts the given message using a hybrid cryptosystem (AES and RSA).
         Requires the encrypted symmetric key that the message was encrypted with.
         """
+        cipherText = RSAEncryption.decrypt(self.rsa , message_key)
+        self.key = cipherText
+        self.iv= iv
+        self.mode = mode
+        decrypted_data = AESEncryption.decrypt(self, message)
         return decrypted_data
 
 
@@ -133,12 +128,13 @@ class DigitalSignature:
 
 if __name__ == "__main__":
     # Messages and Keys
-    keys = get_random_bytes(16)
-    iv= b"munnialkuma25800"
     MESSAGE = b"This is a test message."
     MESSAGE_LONG = get_random_bytes(100_100)
     LOREM = "lorem.txt"
 
+    keys = get_random_bytes(16)
+    iv = b"munnialkuma25800"
+    mode = AES.MODE_CBC
     RSA_KEY = "rsa_key.pem"
     RSA_KEY_TEST = "rsa_key_test.pem"
     RSA_SIG = "rsa_sig.pem"
